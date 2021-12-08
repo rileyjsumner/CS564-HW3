@@ -71,7 +71,40 @@ void BTreeIndex::startScan(const void* lowValParm,
 
 void BTreeIndex::scanNext(RecordId& outRid) 
 {
+    if(nextEntry == -1) {
+        throw new IndexScanCompletedException();
+    }
 
+    LeafNodeInt* leafNode = (LeafNodeInt*) currentPageData; // fetch current page data
+    outRid = leafNode->ridArray[nextEntry];
+
+    if(leafNode->keyArray[nextEntry + 1] == INT_MAX || nextEntry == leafOccupancy - 1) { // validate next entry
+        if(leafNode->rightSibPageNo::null != NULL) {
+            PageId new_pageID = leafNode->rightSibPageNo;
+            Page* new_page;
+
+            bufMgr->readPage(file, new_pageID, new_page);
+            bufMgr->unPinPage(file, currentPageNum, false);
+
+            currentPageData = new_page;
+            currentPageNum = new_pageID;
+
+            if((highOp == LTE && leafNode->keyArray[0] <= highValInt) || (highOp == LT && leafNode->keyArray[0] < highValInt)) {
+                nextEntry = 0;
+            } else {
+                nextEntry = -1;
+            }
+        } else {
+            nextEntry = -1;
+        }
+    } else {
+        if((highOp == LTE && leafNode->keyArray[nextEntry+1] <= highValInt) || (highOp == LT && leafNode->keyArray[nextEntry+1] < highValInt)) {
+            nextEntry++;
+        } else {
+            nextEntry = -1;
+        }
+    }
+    }
 }
 
 // -----------------------------------------------------------------------------
