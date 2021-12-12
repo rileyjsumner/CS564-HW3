@@ -140,7 +140,7 @@ void BTreeIndex::insertEntry(const void *key, const RecordId rid)
     RIDKeyPair<int> newPair;
     newPair.set(rid, *((int *)key)); // create new key-rid pair and set its values
     Page* root; // root of our tree
-    bufMgr->readPage(file, this->RootPageNum, root);
+    bufMgr->readPage(this->file, this->RootPageNum, root);
     PageKeyPair<int> *newChild = null;
     // call insert helper method
     if (this->RootPageNum == this->initRootPageNo){
@@ -171,7 +171,7 @@ void BTreeIndex::insert(Page *currPage, PageId currPageNo, const RIDKeyPair<int>
       if (leaf->ridArray[this->leafOccupancy - 1].page_number == 0)
       {
         insertLeaf(leaf, newPair);
-        bufMgr->unPinPage(file, currPageNo, true);
+        bufMgr->unPinPage(this->file, currPageNo, true);
         newChild = null;
       } // otherwise, we create a new leaf before inserting the new child
       else
@@ -179,7 +179,7 @@ void BTreeIndex::insert(Page *currPage, PageId currPageNo, const RIDKeyPair<int>
           // step 1: create a new page and allocate it to buffer
           PageId newPageNum;
           Page *newPage;
-          bufMgr->allocPage(file, newPageNum, newPage);
+          bufMgr->allocPage(this->file, newPageNum, newPage);
           LeafNodeInt *newLeafNode = (LeafNodeInt *)newPage;
 
           // step 2: find the point at which any shifts will be necessary. We start at the midpoint.
@@ -221,8 +221,8 @@ void BTreeIndex::insert(Page *currPage, PageId currPageNo, const RIDKeyPair<int>
           newChild = &newKeyPair;
           
           // step 7: unpin pages in question
-          bufMgr->unPinPage(file, currPageNo, true);
-          bufMgr->unPinPage(file, newPageNum, true);
+          bufMgr->unPinPage(this->file, currPageNo, true);
+          bufMgr->unPinPage(this->file, newPageNum, true);
 
           // if the current page is the root, we make modifications to the root and the tree
           if (currPageNo == this->rootPageNum)
@@ -511,7 +511,7 @@ void BTreeIndex::startScan(const void* lowValParm,
 
         /// root is a non-leaf node so make it one and find leaf node
         while (true) {
-            bufMgr->readPage(file, currentPageNum, currentPageData);
+            bufMgr->readPage(this->file, currentPageNum, currentPageData);
             scanPageNonLeaf = (NonLeafNodeInt *) currentPageData;
 
             /// when level is equal to 1, then next level will contain leaf nodes
@@ -526,12 +526,12 @@ void BTreeIndex::startScan(const void* lowValParm,
 
                 /// unpin current page and update page number
                 next = scanPageNonLeaf->pageNoArray[index];
-                bufMgr->unPinPage(file, currentPageNum, false);
+                bufMgr->unPinPage(this->file, currentPageNum, false);
                 currentPageNum = next;
-                bufMgr->readPage(file, currentPageNum, currentPageData);
+                bufMgr->readPage(this->file, currentPageNum, currentPageData);
 
                 /// final read to get to the page on the leaf level
-                 bufMgr->readPage(file, currentPageNum, currentPageData);
+                 bufMgr->readPage(this->file, currentPageNum, currentPageData);
                 break;
             }
 
@@ -548,7 +548,7 @@ void BTreeIndex::startScan(const void* lowValParm,
 
             /// unpin current page and update page number
             next = scanPageNonLeaf->pageNoArray[index];
-            bufMgr->unPinPage(file, currentPageNum, false);
+            bufMgr->unPinPage(this->file, currentPageNum, false);
             currentPageNum = next;
         }
     }
@@ -561,7 +561,7 @@ void BTreeIndex::startScan(const void* lowValParm,
 
         ///check that the page is not null before searching nod
         if ( !(nodeLeaf->ridArray[0].page_number) ) {
-            bufMgr->unPinPage(file, currentPageNum, false); /// unpin page and throw exception if so
+            bufMgr->unPinPage(this->file, currentPageNum, false); /// unpin page and throw exception if so
             throw NoSuchKeyFoundException();
         }
         int keyIndex = 0;
@@ -591,10 +591,10 @@ void BTreeIndex::startScan(const void* lowValParm,
 
             /// if at the last index, leaf does not contain value we are looking for
             if (keyIndex == leafOccupancy - 1) {
-                bufMgr->unpinPage(file, currentPageNum, false)
+                bufMgr->unpinPage(this->file, currentPageNum, false)
                 if (nodeLeaf->rightSibPageNo) {
                     currentPageNum = nodeLeaf->rightSibPageNo;
-                    bufMgr->readPage(file, currentPageNum, currentPageData);
+                    bufMgr->readPage(this->file, currentPageNum, currentPageData);
                 }
                 else {
                     throw NoSuchKeyFoundException();
@@ -630,8 +630,8 @@ void BTreeIndex::scanNext(RecordId& outRid)
             Page* new_page;
 
             /// pin and unpin new and old pages
-            bufMgr->readPage(file, new_pageID, new_page);
-            bufMgr->unPinPage(file, currentPageNum, false);
+            bufMgr->readPage(this->file, new_pageID, new_page);
+            bufMgr->unPinPage(this->file, currentPageNum, false);
 
             currentPageData = new_page;
             currentPageNum = new_pageID;
@@ -670,7 +670,7 @@ void BTreeIndex::endScan()
         nextEntry = -1;
         scanExecuting = false;
 
-        bufMgr->unpinPage(file, currentPageNum, false);
+        bufMgr->unpinPage(this->file, currentPageNum, false);
         currentPageNum = -1;
     }
 }
