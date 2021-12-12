@@ -8,6 +8,7 @@
 #include "btree.h"
 #include "filescan.h"
 #include "types.h"
+#include <climits>
 #include "exceptions/bad_index_info_exception.h"
 #include "exceptions/bad_opcodes_exception.h"
 #include "exceptions/bad_scanrange_exception.h"
