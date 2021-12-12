@@ -618,20 +618,25 @@ void BTreeIndex::scanNext(RecordId& outRid)
         throw new IndexScanCompletedException();
     }
 
-    LeafNodeInt* leafNode = (LeafNodeInt*) currentPageData; // fetch current page data
+    /// fetch current node data
+    LeafNodeInt* leafNode = (LeafNodeInt*) currentPageData;
     outRid = leafNode->ridArray[nextEntry];
 
+    /// check if next entry is at the end of the node
     if(leafNode->keyArray[nextEntry + 1] == INT_MAX || nextEntry == leafOccupancy - 1) { // validate next entry
+        /// has a right node been instantiated?
         if(leafNode->rightSibPageNo::null != NULL) {
             PageId new_pageID = leafNode->rightSibPageNo;
             Page* new_page;
 
+            /// pin and unpin new and old pages
             bufMgr->readPage(file, new_pageID, new_page);
             bufMgr->unPinPage(file, currentPageNum, false);
 
             currentPageData = new_page;
             currentPageNum = new_pageID;
 
+            /// Check if node should go back to start
             if((highOp == LTE && leafNode->keyArray[0] <= highValInt) || (highOp == LT && leafNode->keyArray[0] < highValInt)) {
                 nextEntry = 0;
             } else {
@@ -641,6 +646,7 @@ void BTreeIndex::scanNext(RecordId& outRid)
             nextEntry = -1;
         }
     } else {
+        /// after handling special cases, check if scan should continue to next node
         if((highOp == LTE && leafNode->keyArray[nextEntry+1] <= highValInt) || (highOp == LT && leafNode->keyArray[nextEntry+1] < highValInt)) {
             nextEntry++;
         } else {
