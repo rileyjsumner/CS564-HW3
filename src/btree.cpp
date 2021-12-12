@@ -66,7 +66,6 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
         headerPageNum = file->getFirstPageNo();
         bufMgr->readPage(file, headerPageNum, pageHead);
 
-        IndexMetaInfo *index_meta = (IndexMetaInfo *) pageHead; /// create meta page and store root page
         rootPageNum = index_meta->rootPageNo;
 
         // unpin the page
