@@ -141,7 +141,7 @@ void BTreeIndex::insertEntry(const void *key, const RecordId rid)
     newPair.set(rid, *((int *)key)); // create new key-rid pair and set its values
     Page* root; // root of our tree
     bufMgr->readPage(file, this.RootPageNum, root);
-    PageKeyPair<int> *newChild = nullptr;
+    PageKeyPair<int> *newChild = null;
     // call insert helper method
     if (this.RootPageNum == this.initRootPageNo){
         insert(root, this.RootPageNum, newPair, newChild, true);
@@ -172,7 +172,7 @@ void BTreeIndex::insert(Page *currPage, PageId currPageNo, const RIDKeyPair<int>
       {
         insertLeaf(leaf, newPair);
         bufMgr->unPinPage(file, currPageNo, true);
-        newChild = nullptr;
+        newChild = null;
       } // otherwise, we create a new leaf before inserting the new child
       else
       {
@@ -265,7 +265,7 @@ void BTreeIndex::insert(Page *currPage, PageId currPageNo, const RIDKeyPair<int>
     insert(nextPage, nextNodeNo, newPair, newChild, isLeaf);
     
     // if the child points to null and there is no split...
-    if (newChild == nullptr)
+    if (newChild == null)
     {
         // ... we unpin the current page from the buffer
         bufMgr->unPinPage(file, currPageNo, false);
@@ -277,7 +277,7 @@ void BTreeIndex::insert(Page *currPage, PageId currPageNo, const RIDKeyPair<int>
       {
         // ...we insert the new child there and unpin the current page from the buffer
         insertNonLeaf(currNode, newChild);
-        newChild = nullptr;
+        newChild = null;
         bufMgr->unPinPage(file, currPageNo, true);
       }
       // otherwise, we will have to create a new non leaf node
