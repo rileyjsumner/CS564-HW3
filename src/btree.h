@@ -209,6 +209,13 @@ class BTreeIndex {
 	PageId	rootPageNum;
 
   /**
+   * page number of root page of B+ tree inside index file.
+   */
+    PageId	initRootPageNo;
+
+    PageId firstPageNumber;
+
+  /**
    * Datatype of attribute over which index is built.
    */
 	Datatype	attributeType;
@@ -364,7 +371,15 @@ class BTreeIndex {
 	 * @throws ScanNotInitializedException If no scan has been initialized.
 	**/
 	void endScan();
-	
+
+	void insertHelper(Page *currPage, PageId currPageNo, const RIDKeyPair<int> newPair, PageKeyPair<int> *&newChild, bool isLeaf);
+
+	void insertLeaf(LeafNodeInt *leaf, RIDKeyPair<int> newPair);
+
+	void insertNonLeaf(NonLeafNodeInt *nonLeaf, PageKeyPair<int> *currentChild);
+
+	void rootMods(PageId pageId, PageKeyPair<int> *newChild);
+
 };
 
 }
