@@ -83,6 +83,8 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
         file = new BlobFile(index_string.str(), true);
         bufMgr->allocPage(file, headerPageNum, pageHead);
 
+        index_meta = (IndexMetaInfo *) pageHead;
+
         Page *pageRoot;
         bufMgr->allocPage(file, rootPageNum, pageRoot);
 
