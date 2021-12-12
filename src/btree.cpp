@@ -272,7 +272,7 @@ void BTreeIndex::startScan(const void* lowValParm,
                 bufMgr -> unpinPage(file, currentPageNum, false)
                 if (nodeLeaf -> rightSibPageNo) {
                     currentPageNum = nodeLeaf -> rightSibPageNo;
-                    bufMgr -> readPage(file, currentPageNum, false);
+                    bufMgr -> readPage(file, currentPageNum, currentPageData);
                 }
                 else {
                     throw NoSuchKeyFoundException();
