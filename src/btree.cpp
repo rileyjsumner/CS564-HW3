@@ -51,7 +51,7 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
     Page *pageHead;
 
     /// create meta index
-    IndexMetaInfo *index_meta = (IndexMetaInfo *) pageHead;
+    IndexMetaInfo *index_meta;
 
     /// get and output the name of the index from the relationName passed in
     std::ostringstream index_string;
@@ -65,6 +65,8 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
 
         headerPageNum = file->getFirstPageNo();
         bufMgr->readPage(file, headerPageNum, pageHead);
+
+        index_meta = (IndexMetaInfo *) pageHead;
 
         rootPageNum = index_meta->rootPageNo;
 
