@@ -7,6 +7,8 @@
 
 #include "btree.h"
 #include "filescan.h"
+#include "types.h"
+#include "bufHashTbl.h"
 #include "exceptions/bad_index_info_exception.h"
 #include "exceptions/bad_opcodes_exception.h"
 #include "exceptions/bad_scanrange_exception.h"
@@ -164,7 +166,7 @@ void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 void BTreeIndex::insert(Page *currPage, PageId currPageNo, const RIDKeyPair<int> newPair, PageKeyPair<int> *&newChild, bool isLeaf)
 {
     // case when we're about to insert at a leaf
-    if (isLeaf == true)
+    if (isLeaf)
     {
       LeafNodeInt *leaf = (LeafNodeInt *)currPage;
       // if we have space at a certain existing leaf to insert the child, we do it straight away
@@ -360,7 +362,7 @@ void BTreeIndex::rootMods(PageId pageId, PageKeyPair<int> *newChild)
   PageId newRootNum;
   Page *newRoot;
   bufMgr->allocPage(file, newRootNum, newRoot);
-  NonLeafNodeInt *pageNew = (NonLeafNodeInt *)newRoot;
+  NonLeafNodeInt *pageNew = (NonLeafNodeInt *) newRoot;
 
   // step 2: as we have a new root, we need to update the metadata as necessary
     if(this->rootPageNum == this->initRootPageNo) {
@@ -630,8 +632,8 @@ void BTreeIndex::scanNext(RecordId& outRid)
             Page* new_page;
 
             /// pin and unpin new and old pages
-            bufMgr->readPage(this->file, new_pageID, new_page);
-            bufMgr->unPinPage(this->file, currentPageNum, false);
+            bufMgr->readPage(file, new_pageID, new_page);
+            bufMgr->unPinPage(file, currentPageNum, false);
 
             currentPageData = new_page;
             currentPageNum = new_pageID;
