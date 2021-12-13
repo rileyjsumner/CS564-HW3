@@ -11,6 +11,7 @@
 #include <string>
 #include "string.h"
 #include <sstream>
+#include <stdio.h>
 
 #include "types.h"
 #include "page.h"

@@ -5,6 +5,7 @@
  * Copyright (c) 2012 Database Group, Computer Sciences Department, University of Wisconsin-Madison.
  */
 
+#include <stdio.h>
 #include "btree.h"
 #include "filescan.h"
 #include "types.h"
@@ -34,12 +35,16 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
 		const int attrByteOffset,
 		const Datatype attrType)
 {
+
+    this -> rootPageNum = (PageId) -1;
+    this -> initRootPageNo = (PageId) -1;
+
     /// variables used for scanning
-    this->scanExecuting = false;
-    this->highValInt = 0;
-    this->lowValInt = 0;
-    this->lowOp = GT;
-    this->highOp = LT;
+    this-> scanExecuting = false;
+    this-> highValInt = 0;
+    this-> lowValInt = 0;
+    this-> lowOp = GT;
+    this-> highOp = LT;
 
     /// node and leaf occupancy
     leafOccupancy = INTARRAYLEAFSIZE;
@@ -64,19 +69,21 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
         file = new BlobFile(index_string.str(), false);
 
         headerPageNum = file->getFirstPageNo();
+        printf("68\n");
         bufMgr->readPage(file, headerPageNum, pageHead);
 
         index_meta = (IndexMetaInfo *) pageHead;
 
         rootPageNum = index_meta->rootPageNo;
+        this -> initRootPageNo = rootPageNum;
 
         // unpin the page
+        printf("77\n");
         bufMgr->unPinPage(file, headerPageNum, false);
 
     }
     catch(FileNotFoundException err) { /// catch exception if file not found, make new file
         /// variables used in function
-        Page *pageHead;
         RecordId r_id;
         std::string r;
         /// make new file and create a header and root page
@@ -88,6 +95,7 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
         Page *pageRoot;
         bufMgr->allocPage(file, rootPageNum, pageRoot);
 
+        this -> initRootPageNo = rootPageNum;
         /// create leaf node with root info
         LeafNodeInt *rootNode = (LeafNodeInt *) pageRoot;
         rootNode->rightSibPageNo = 0;
@@ -96,7 +104,6 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
         index_meta->attrByteOffset = attrByteOffset;
         strcpy(index_meta->relationName, relationName.c_str());
 
-        firstPageNumber = rootPageNum;
         index_meta->rootPageNo = rootPageNum;
 
         /// instantiate a filescan to insert into new file
@@ -113,14 +120,12 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
         catch (EndOfFileException err) { }
 
         /// unpin pages and flush the file
+        printf("120\n");
         bufMgr-> unPinPage(file, headerPageNum, true);
+        printf("122\n");
         bufMgr-> unPinPage(file, rootPageNum, true);
         bufMgr->flushFile(file);
     }
-
-    this->initRootPageNo = index_meta->rootPageNo; // used later on to check if current root and initial root that we started with are the same
-    rootPageNum = index_meta->rootPageNo; // actual variable we use (from btree.h) for the root's page number
-
 }
 
 
@@ -146,9 +151,11 @@ void BTreeIndex::insertEntry(const void *key, const RecordId rid)
     RIDKeyPair<int> newPair;
     newPair.set(rid, *((int *)key)); // create new key-rid pair and set its values
     Page* root; // root of our tree
+    printf("155\n");
     bufMgr->readPage(this->file, this->rootPageNum, root);
     PageKeyPair<int> *newChild = NULL;
     // call insert helper method
+    printf("ROOT NUM -> %d INIT ROOT NUM -> %d\n\n\n\n", rootPageNum, initRootPageNo);
     if (this->rootPageNum == initRootPageNo){
         insertHelper(root, this->rootPageNum, newPair, newChild, true);
     } else {
@@ -178,6 +185,7 @@ void BTreeIndex::insertHelper(Page *currPage, PageId currPageNo, const RIDKeyPai
       // if we have space at a certain existing leaf to insert the child, we do it straight away
       if (leaf->ridArray[this->leafOccupancy - 1].page_number == 0) {
         insertLeaf(leaf, newPair);
+        printf("187\n");
         bufMgr->unPinPage(this->file, currPageNo, true);
         newChild = NULL;
       } // otherwise, we create a new leaf before inserting the new child
@@ -223,7 +231,9 @@ void BTreeIndex::insertHelper(Page *currPage, PageId currPageNo, const RIDKeyPai
           newChild = &newKeyPair;
 
           // step 7: unpin pages in question
+          printf("233\n");
           bufMgr->unPinPage(this->file, currPageNo, true);
+          printf("235\n");
           bufMgr->unPinPage(this->file, newPageNum, true);
 
           // if the current page is the root, we make modifications to the root and the tree
@@ -250,6 +260,7 @@ void BTreeIndex::insertHelper(Page *currPage, PageId currPageNo, const RIDKeyPai
         // assign the newly found index of the next non leaf node to the nextNodeNo variable
         nextNodeNo = currNode->pageNoArray[nextIdx];
     }
+   //printf("263  nodeNo -> %d\n", nextNodeNo);
    bufMgr->readPage(this->file, nextNodeNo, nextPage);
 
     // change isLeaf according to changes in currNode's level
@@ -265,6 +276,7 @@ void BTreeIndex::insertHelper(Page *currPage, PageId currPageNo, const RIDKeyPai
     if (newChild == NULL)
     {
         // ... we unpin the current page from the buffer
+        printf("279\n");
         this->bufMgr->unPinPage(this->file, currPageNo, false);
     } // split is needed
     else
@@ -275,6 +287,7 @@ void BTreeIndex::insertHelper(Page *currPage, PageId currPageNo, const RIDKeyPai
         // ...we insert the new child there and unpin the current page from the buffer
         insertNonLeaf(currNode, newChild);
         newChild = NULL;
+        printf("290\n");
         bufMgr->unPinPage(file, currPageNo, true);
       }
       // otherwise, we will have to create a new non leaf node
@@ -330,7 +343,9 @@ void BTreeIndex::insertHelper(Page *currPage, PageId currPageNo, const RIDKeyPai
           newChild = &newPageKeyPair;
 
           // unpin pages in question
+          printf("345\n");
           bufMgr->unPinPage(file, currPageNo, true);
+          printf("347\n");
           bufMgr->unPinPage(file, newPageNum, true);
 
           // if the current page is the root, we make modifications to the root and the tree
@@ -372,6 +387,7 @@ void badgerdb::BTreeIndex::rootMods(PageId pageId, PageKeyPair<int> *newChild)
 
   // step 3: getting the new meta info to change the rootPageNum and rootPageNo values in the metadata itself
   Page *meta;
+  printf("390\n");
   bufMgr->readPage(file, headerPageNum, meta);
   IndexMetaInfo *newMetaInfo = (IndexMetaInfo *) meta;
 
@@ -380,7 +396,9 @@ void badgerdb::BTreeIndex::rootMods(PageId pageId, PageKeyPair<int> *newChild)
   newMetaInfo->rootPageNo = newRootNum;
 
   // step 5: unpin pages in question
+  printf("399\n");
   bufMgr->unPinPage(file, headerPageNum, true);
+  printf("401\n");
   bufMgr->unPinPage(file, newRootNum, true);
 }
 
@@ -499,7 +517,8 @@ void badgerdb::BTreeIndex::startScan(const void* lowValParm,
 
     /// check if the root is a leaf node, otherwise scan until finding first
     /// non - leaf node
-    if (firstPageNumber == rootPageNum) {
+    if (initRootPageNo == rootPageNum) {
+        printf("520\n");
         bufMgr->readPage(file, rootPageNum, currentPageData);
     }
     else {
@@ -508,6 +527,7 @@ void badgerdb::BTreeIndex::startScan(const void* lowValParm,
 
         /// root is a non-leaf node so make it one and find leaf node
         while (true) {
+            printf("530\n");
             bufMgr->readPage(this->file, currentPageNum, currentPageData);
             scanPageNonLeaf = (NonLeafNodeInt *) currentPageData;
 
@@ -523,12 +543,15 @@ void badgerdb::BTreeIndex::startScan(const void* lowValParm,
 
                 /// unpin current page and update page number
                 next = scanPageNonLeaf->pageNoArray[index];
+                printf("546\n");
                 bufMgr->unPinPage(this->file, currentPageNum, false);
                 currentPageNum = next;
+                printf("549\n");
                 bufMgr->readPage(this->file, currentPageNum, currentPageData);
 
                 /// final read to get to the page on the leaf level
-                 bufMgr->readPage(this->file, currentPageNum, currentPageData);
+                printf("553\n");
+                bufMgr->readPage(this->file, currentPageNum, currentPageData);
                 break;
             }
 
@@ -545,6 +568,7 @@ void badgerdb::BTreeIndex::startScan(const void* lowValParm,
 
             /// unpin current page and update page number
             next = scanPageNonLeaf->pageNoArray[index];
+            printf("571\n");
             bufMgr->unPinPage(this->file, currentPageNum, false);
             currentPageNum = next;
         }
@@ -558,6 +582,7 @@ void badgerdb::BTreeIndex::startScan(const void* lowValParm,
 
         ///check that the page is not NULL before searching nod
         if ( !(nodeLeaf->ridArray[0].page_number) ) {
+            printf("585\n");
             bufMgr->unPinPage(this->file, currentPageNum, false); /// unpin page and throw exception if so
             throw NoSuchKeyFoundException();
         }
@@ -588,9 +613,11 @@ void badgerdb::BTreeIndex::startScan(const void* lowValParm,
 
             /// if at the last index, leaf does not contain value we are looking for
             if (keyIndex == leafOccupancy - 1) {
+                printf("615\n");
                 bufMgr->unPinPage(this->file, currentPageNum, false);
                 if (nodeLeaf->rightSibPageNo) {
                     currentPageNum = nodeLeaf->rightSibPageNo;
+                    printf("620\n");
                     bufMgr->readPage(this->file, currentPageNum, currentPageData);
                 }
                 else {
@@ -627,7 +654,9 @@ void badgerdb::BTreeIndex::scanNext(RecordId& outRid)
             Page* new_page;
 
             /// pin and unpin new and old pages
+            printf("657\n");
             bufMgr->readPage(file, new_pageID, new_page);
+            printf("659\n");
             bufMgr->unPinPage(file, currentPageNum, false);
 
             currentPageData = new_page;
@@ -665,6 +694,7 @@ void badgerdb::BTreeIndex::endScan() {
         nextEntry = -1;
         scanExecuting = false;
 
+        printf("697\n");
         bufMgr->unPinPage(this->file, currentPageNum, false);
         currentPageNum = -1;
     }
