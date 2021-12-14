@@ -6,6 +6,7 @@
  */
 
 #include <vector>
+#include <stdio.h>
 #include "btree.h"
 #include "page.h"
 #include "filescan.h"
@@ -401,6 +402,7 @@ int intScan(BTreeIndex * index, int lowVal, Operator lowOp, int highVal, Operato
 	{
 		try
 		{
+		    printf("HERE NOW");
 			index->scanNext(scanRid);
 			bufMgr->readPage(file1, scanRid.page_number, curPage);
 			RECORD myRec = *(reinterpret_cast<const RECORD*>(curPage->getRecord(scanRid).data()));
@@ -430,7 +432,6 @@ int intScan(BTreeIndex * index, int lowVal, Operator lowOp, int highVal, Operato
   }
   index->endScan();
   std::cout << std::endl;
-
 	return numResults;
 }
 
